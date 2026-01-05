@@ -12,7 +12,7 @@ def test_high_risk():
     # Scenario: pT3b -> High Risk
     risk = logic.classify_risk(
         psa_pre_srt=0.2,
-        gleason=GleasonScore.GG2,
+        gleason=GleasonScore.ISUP2,
         stage=TumorStage.PT3B,
         psadt_months=20,
         pet_findings=PetFindings.NEGATIVE,

@@ -17,11 +17,11 @@ class ADTRecommendation(Enum):
     LONG_ARPI = "sRT + ADT Longa + ARPI (24 meses)"
 
 class GleasonScore(Enum):
-    GG1 = "GG1 (≤ 6)"
-    GG2 = "GG2 (3+4=7)"
-    GG3 = "GG3 (4+3=7)"
-    GG4 = "GG4 (4+4=8, 3+5=8, 5+3=8)"
-    GG5 = "GG5 (9-10)"
+    ISUP1 = "ISUP 1 (≤ 6)"
+    ISUP2 = "ISUP 2 (3+4=7)"
+    ISUP3 = "ISUP 3 (4+3=7)"
+    ISUP4 = "ISUP 4 (4+4=8, 3+5=8, 5+3=8)"
+    ISUP5 = "ISUP 5 (9-10)"
 
 class TumorStage(Enum):
     PT2 = "pT2 (Confinado à próstata)"

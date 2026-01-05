@@ -11,7 +11,7 @@ def test_pdf_generation():
     # Mock inputs
     inputs = {
         'psa_pre_srt': 0.5,
-        'gleason': GleasonScore.GG3,
+        'gleason': GleasonScore.ISUP3,
         'stage': TumorStage.PT2,
         'margin': MarginStatus.R0,
         'psadt_months': 10.0,

@@ -17,9 +17,9 @@ def classify_risk(
     Classifies risk based on V4.2026 Top-Down Hierarchy.
     
     1. VERY HIGH: N1 OR PSADT<=6 OR (Persist + GG>=4)
-    2. HIGH: GG>=4 OR pT3b OR PSADT<=12 OR PSA>1.0
-    3. INTERMEDIATE: GG2-3 OR pT3a OR R1 OR PSA>=0.5
-    4. LOW: (Implied else / GG1+pT2+R0+PSADT>12+PSA<0.5)
+    2. HIGH: ISUP>=4 OR pT3b OR PSADT<=12 OR PSA>1.0
+    3. INTERMEDIATE: ISUP2-3 OR pT3a OR R1 OR PSA>=0.5
+    4. LOW: (Implied else / ISUP1+pT2+R0+PSADT>12+PSA<0.5)
     """
 
     # 0. Try External Rules
@@ -45,8 +45,8 @@ def classify_risk(
     
     # Helper booleans
     # Grade
-    is_gg4_5 = gleason in [GleasonScore.GG4, GleasonScore.GG5]
-    is_gg2_3 = gleason in [GleasonScore.GG2, GleasonScore.GG3]
+    is_gg4_5 = gleason in [GleasonScore.ISUP4, GleasonScore.ISUP5]
+    is_gg2_3 = gleason in [GleasonScore.ISUP2, GleasonScore.ISUP3]
     
     # Stage
     is_pt3b = stage == TumorStage.PT3B
@@ -199,3 +199,74 @@ def get_baseline_recurrence_risk(risk: RiskLevel) -> float:
         return 20.0 # Moderate risk
     else:
         return 10.0 # Low risk
+
+import math
+from datetime import date
+from typing import Optional
+
+def calculate_psadt(dates: list[date], values: list[float]) -> Optional[float]:
+    """
+    Calculates PSA Doubling Time (PSADT) in months using log-linear regression.
+    Formula: PSADT = ln(2) / slope
+    Where slope is from: ln(PSA) = slope * time + intercept
+    
+    Args:
+        dates: List of date objects (must be same length as values)
+        values: List of PSA values (must be > 0)
+        
+    Returns:
+        float: PSADT in months (rounded to 1 decimal)
+        None: If calculation fails (insufficient data, negative slope, etc.)
+    """
+    if not dates or not values or len(dates) != len(values):
+        return None
+        
+    # Filter invalid data (PSA <= 0)
+    data = []
+    for d, v in zip(dates, values):
+        if v > 0 and d is not None:
+            data.append((d, v))
+            
+    # Need at least 2 points
+    if len(data) < 2:
+        return None
+        
+    # Sort by date
+    data.sort(key=lambda x: x[0])
+    
+    # Calculate time in months from first date
+    # using 365.25 / 12 = 30.4375 days per month
+    first_date = data[0][0]
+    
+    x_months = []
+    y_log_psa = []
+    
+    for d, v in data:
+        days_diff = (d - first_date).days
+        months = days_diff / 30.4375
+        x_months.append(months)
+        y_log_psa.append(math.log(v))
+        
+    # Linear Regression: y = mx + c
+    # m = (N * sum(xy) - sum(x) * sum(y)) / (N * sum(x^2) - sum(x)^2)
+    
+    N = len(data)
+    sum_x = sum(x_months)
+    sum_y = sum(y_log_psa)
+    sum_xy = sum(x * y for x, y in zip(x_months, y_log_psa))
+    sum_xx = sum(x * x for x in x_months)
+    
+    denominator = (N * sum_xx - sum_x * sum_x)
+    
+    if abs(denominator) < 1e-9:
+        return None # Vertical line (all dates same?)
+        
+    slope = (N * sum_xy - sum_x * sum_y) / denominator
+    
+    # If slope <= 0, PSA is stable or decreasing -> PSADT is infinite/negative
+    if slope <= 0.0001:
+        return None
+        
+    psadt = math.log(2) / slope
+    
+    return round(psadt, 1)

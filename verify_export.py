@@ -13,7 +13,7 @@ def test_summary_generation():
     # Mock Inputs
     inputs = {
         'psa_pre_srt': 0.5,
-        'gleason': GleasonScore.GG3,
+        'gleason': GleasonScore.ISUP3,
         'stage': TumorStage.PT2,
         'margin': MarginStatus.R0,
         'psadt_months': 10.0,
@@ -36,7 +36,7 @@ def test_summary_generation():
     print("----------------------")
     
     assert "RESUMO CLÍNICO" in text
-    assert "GG3" in text
+    assert "ISUP 3" in text
     assert "Risco Metabólico Elevado: Sim" in text
     assert "(NNT): 20" in text
     

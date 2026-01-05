@@ -3,12 +3,24 @@ from .constants import (
     GleasonScore, TumorStage, MarginStatus, PetFindings, LifeExpectancy,
     RiskLevel, RTField, ADTRecommendation, NodalStage
 )
+from .logic import calculate_psadt
+import pandas as pd
+from datetime import date
+
+def reset_session():
+    """Callback to clear session state"""
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
 
 def render_inputs():
     """
     Renders the sidebar inputs and returns a dictionary of values.
     """
     st.sidebar.header("Dados Clínicos")
+    
+    if st.sidebar.button("Limpar/Resetar Dados", type="primary"):
+        reset_session()
+        st.rerun()
     
     psa_option = st.sidebar.selectbox(
         "PSA pré-sRT (ng/dL)", 
@@ -41,15 +53,51 @@ def render_inputs():
     
     psadt_months = None
     if psadt_option == "Conhecido":
+        with st.sidebar.expander("Calculadora de PSADT", expanded=False):
+            st.markdown("Insira datas e valores de PSA:")
+            
+            # Default empty data
+            if 'psadt_data' not in st.session_state:
+                st.session_state.psadt_data = pd.DataFrame(
+                    [
+                        {"Data": date.today(), "PSA (ng/mL)": 0.0},
+                        {"Data": date.today(), "PSA (ng/mL)": 0.0},
+                    ]
+                )
+
+            edited_df = st.data_editor(
+                st.session_state.psadt_data,
+                num_rows="dynamic",
+                column_config={
+                    "Data": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
+                    "PSA (ng/mL)": st.column_config.NumberColumn("PSA", min_value=0.0, format="%.2f"),
+                },
+                key="psadt_editor"
+            )
+            
+            if st.button("Calcular PSADT"):
+                dates = pd.to_datetime(edited_df["Data"]).dt.date.tolist()
+                values = edited_df["PSA (ng/mL)"].tolist()
+                
+                result = calculate_psadt(dates, values)
+                
+                if result:
+                    st.success(f"PSADT Calculado: {result} meses")
+                    st.session_state.psadt_input = result
+                else:
+                    st.error("Dados insuficientes ou inválidos (PSA estável/caindo?).")
+
         psadt_months = st.sidebar.number_input(
             "PSADT (meses)", 
-            min_value=0.0, value=10.0, step=1.0
+            min_value=0.0, step=0.1,
+            key="psadt_input",
+            value=10.0 # Default fallback
         )
         
     st.sidebar.markdown("---")
     
     gleason = st.sidebar.selectbox(
-        "Escore de Gleason (Patológico)",
+        "Histologia (ISUP Grade Group)",
         options=[e for e in GleasonScore],
         format_func=lambda x: x.value
     )
@@ -123,23 +171,47 @@ def render_results(risk, rt_field, adt, inputs):
     col1, col2, col3 = st.columns([1, 1, 1]) # Adjusted columns
     
     # Dynamic styling for risk
-    risk_color = "green"
-    if risk == RiskLevel.INTERMEDIATE:
-        risk_color = "orange"
-    elif risk == RiskLevel.HIGH:
-        risk_color = "red"
-    elif risk == RiskLevel.VERY_HIGH:
-        risk_color = "red" # Or maybe purple/darkred? Let's use red for consistency or specific styling.
-        # Streamlit standard colors: blue, green, orange, red, violet.
-        # Let's try violet for Very High to distinguish? Or just Red.
-        # User prompt didn't specify color, but RED implies high alert.
-        risk_color = "red"
+    if risk == RiskLevel.VERY_HIGH or risk == RiskLevel.HIGH:
+        risk_func = st.error # Red
+    elif risk == RiskLevel.INTERMEDIATE:
+        risk_func = st.warning # Yellow
+    else:
+        risk_func = st.success # Green
         
+    risk_func(f"### Classificação: **{risk.value}**")
+    
+    with st.expander("Entenda o Risco de Metástase (Basal)", expanded=False):
+        st.markdown("""
+        **Para a construção de uma calculadora de suporte à decisão, a estimativa do risco basal de metástase (incidência cumulativa de metástases a distância) em 5 anos para pacientes submetidos à radioterapia de salvamento (sRT) isolada (braço placebo/controle) é baseada em grandes coortes de estudos de fase 3 e recomendações de Guidelines (NCCN, EAU, AUA):**
+
+        **1. Baixo Risco (Early sRT: PSA < 0,5 ng/mL, ISUP 1, pT2, R0)**
+        Neste cenário de salvamento precoce e biologia favorável, o risco de metástase a distância em 5 anos é baixo, estimado em **aproximadamente 5% a 7%**. Estudos que avaliam o salvamento com PSA < 0,2 ng/mL mostram que a incidência cumulativa de metástases pode ser tão reduzida quanto 5% nesse período, o que justifica a discussão sobre a omissão de ADT para evitar toxicidade desnecessária.
+
+        **2. Risco Intermediário (PSA 0,5–1,0 ng/mL ou ISUP 2-3 ou pT3a/R1)**
+        Para pacientes com características intermediárias (especialmente o grupo *Unfavorable Intermediate Risk*), a probabilidade de metástase em 5 anos sem o uso de ADT eleva-se para a faixa de **10% a 15%**. Dados do braço controle do estudo GETUG-AFU 16 e análises de subgrupos do RTOG 9601 confirmam que, embora a falha local seja o evento primário, o risco de disseminação sistêmica torna-se clinicamente relevante nesse intervalo.
+
+        **3. Alto Risco (PSA > 1,0 ng/mL, ISUP 4-5 ou pT3b)**
+        No grupo de alto risco biológico ou carga tumoral elevada no momento do salvamento (sRT tardia), o risco de metástase em 5 anos sem ADT situa-se entre **15% e 25%**. Em 10 a 12 anos, esse risco cumulativo pode ultrapassar 37% para pacientes com PSA inicial superior a 2,0 ng/mL. A análise do RTOG 9601 demonstrou que o benefício absoluto da ADT de longa duração é máximo aqui, justamente por incidir sobre este elevado risco basal.
+
+        **4. Muito Alto Risco (miN1/pN1, PSA Persistente ou PSADT ≤ 6 meses)**
+        Este grupo apresenta o maior risco de disseminação sistêmica precoce. A probabilidade de metástase em 5 anos sem bloqueio hormonal é estimada **acima de 30%**.
+        - **PSA Persistente (PERS):** Pacientes que nunca atingiram nadir indetectável após a cirurgia apresentam um risco de falha sistêmica em 15 anos de 47% (MFS de 53%), indicando uma biologia micro-metastática já presente no pós-operatório imediato.
+        - **Recorrência Nodal (miN1):** Em pacientes com recidiva nodal regional detectada por PET-PSMA, a omissão de ADT resulta em uma taxa de progressão bioquímica de 75% em 5 anos, o que serve como um precursor direto para a metástase clínica a curto prazo.
+
+        ---
+        **Resumo para a Calculadora (Risco de Metástase em 5 anos - sRT Alone)**
+        
+        | Categoria de Risco | Risco Estimado (5 anos of failure) |
+        | :--- | :--- |
+        | **Baixo** | ~5% - 7% |
+        | **Intermediário** | ~10% - 15% |
+        | **Alto** | ~15% - 25% |
+        | **Muito Alto / N1** | > 30% |
+        """)
+        
+    col1, col2 = st.columns([1, 1]) # Two columns now (Gauge + Factors)
+
     with col1:
-        st.markdown(f"**Classificação**")
-        st.markdown(f":{risk_color}[**{risk.value}**]")
-        
-    with col2:
         from . import visuals
         # We need benefit data here. It was calculated later in the original code.
         # Let's fetch it now.,
@@ -151,10 +223,10 @@ def render_results(risk, rt_field, adt, inputs):
         fig = visuals.create_risk_gauge(baseline_risk)
         st.plotly_chart(fig, use_container_width=True)
 
-    with col3:
+    with col2:
         st.markdown("**Fatores de Risco**")
         factors = []
-        if inputs['gleason'] in [GleasonScore.GG4, GleasonScore.GG5]:
+        if inputs['gleason'] in [GleasonScore.ISUP4, GleasonScore.ISUP5]:
             factors.append(f"- Alto Grau ({inputs['gleason'].value})")
         if inputs['stage'] == TumorStage.PT3B:
             factors.append("- Invasão de Vesícula Seminal")
@@ -289,7 +361,10 @@ def render_results(risk, rt_field, adt, inputs):
     else:
         st.write("Observação vigilante (em casos selecionados) ou sRT precoce sem ADT.")
 
-    # Disclaimer (on screen)
+    # Disclaimer (Footer)
+    st.markdown("---")
+    st.caption("Ferramenta auxiliar. Dados não são armazenados (Compliance LGPD/HIPAA).")
+    
     with st.expander("Aviso Legal (Disclaimer)", expanded=False):
         st.markdown("""
         **AVISO LEGAL**: Esta ferramenta é destinada exclusivamente ao uso por profissionais de saúde qualificados. 

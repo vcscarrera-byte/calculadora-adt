@@ -7,7 +7,7 @@ def test_pn1_logic():
     # Base case: Low Risk features but pN1
     r = classify_risk(
         psa_pre_srt=0.1,
-        gleason=GleasonScore.GG1,
+        gleason=GleasonScore.ISUP1,
         stage=TumorStage.PT2,
         psadt_months=20,
         pet_findings=PetFindings.NEGATIVE,
