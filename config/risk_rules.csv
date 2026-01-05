@@ -1,0 +1,19 @@
+risk_level,variable,operator,value
+# RULES FOR V4.2026 LOGIC
+# VERY HIGH RISK
+VERY_HIGH,pet_findings,IN,PELVIC_LN;EXTRA_PELVIC
+VERY_HIGH,psadt_months,LE,6.0
+
+# HIGH RISK
+HIGH,gleason,IN,GG4;GG5
+HIGH,stage,EQ,PT3B
+HIGH,psadt_months,LE,12.0
+HIGH,psa_pre_srt,GT,0.7
+
+# INTERMEDIATE RISK
+INTERMEDIATE,gleason,IN,GG2;GG3
+INTERMEDIATE,stage,EQ,PT3A
+INTERMEDIATE,margin,EQ,R1
+INTERMEDIATE,psa_pre_srt,GT,0.3
+
+# NOTE: Complex rules (e.g. Persistence + Gleason >= 4) are handled in the code logic.
