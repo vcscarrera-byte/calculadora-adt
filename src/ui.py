@@ -6,107 +6,93 @@ from .constants import (
 
 def render_inputs():
     """
-    Renders the inputs in the main body (Expander) for better mobile visibility.
-    Returns a dictionary of values.
+    Renders the sidebar inputs and returns a dictionary of values.
     """
-    # Use an expander open by default so mobile users see it immediately
-    with st.expander("📝 Preencher Dados Clínicos (Clique para expandir/recolher)", expanded=True):
-        
-        st.markdown("### Dados Principais")
-        
-        psa_option = st.selectbox(
-            "PSA pré-sRT (ng/dL)", 
-            options=[
-                "<= 0,3 ng/mL",
-                "> 0,3 a <= 0,7 ng/mL",
-                "> 0,7 ng/mL"
-            ]
-        )
-        
-        # Map selection
-        if psa_option == "<= 0,3 ng/mL":
-            psa_pre_srt = 0.2
-        elif psa_option == "> 0,3 a <= 0,7 ng/mL":
-            psa_pre_srt = 0.5
-        else:
-            psa_pre_srt = 0.8
-            
-        psa_label = psa_option
+    st.sidebar.header("Dados Clínicos")
     
-        has_psa_persistence = st.checkbox(
-            "Persistência do PSA (Nunca indetectável pós-PR)",
-            help="Se o PSA nunca baixou para < 0.1 ng/mL após a cirurgia."
-        )
+    psa_option = st.sidebar.selectbox(
+        "PSA pré-sRT (ng/dL)", 
+        options=[
+            "<= 0,3 ng/mL",
+            "> 0,3 a <= 0,7 ng/mL",
+            "> 0,7 ng/mL"
+        ]
+    )
+    
+    # Map selection
+    if psa_option == "<= 0,3 ng/mL":
+        psa_pre_srt = 0.2
+    elif psa_option == "> 0,3 a <= 0,7 ng/mL":
+        psa_pre_srt = 0.5
+    else:
+        psa_pre_srt = 0.8
         
-        col_clin_1, col_clin_2 = st.columns(2)
-        
-        with col_clin_1:
-            gleason = st.selectbox(
-                "Escore de Gleason (Patológico)",
-                options=[e for e in GleasonScore],
-                format_func=lambda x: x.value
-            )
-            
-            stage = st.selectbox(
-                "Estadiamento Patológico (pT)",
-                options=[e for e in TumorStage],
-                format_func=lambda x: x.value
-            )
-            
-        with col_clin_2:
-            n_stage = st.selectbox(
-                "Estadiamento Patológico (pN)",
-                options=[e for e in NodalStage],
-                format_func=lambda x: x.value
-            )
-            
-            margin = st.selectbox(
-                "Margem Cirúrgica",
-                options=[e for e in MarginStatus],
-                format_func=lambda x: x.value
-            )
-        
-        st.markdown("---")
-        
-        col_pet_1, col_pet_2 = st.columns(2)
-        
-        with col_pet_1:
-            pet_findings = st.selectbox(
-                "Achados PET-PSMA",
-                options=[e for e in PetFindings],
-                format_func=lambda x: x.value
-            )
-            
-        with col_pet_2:
-             psadt_option = st.radio(
-                "Tempo de Duplicação (PSADT)",
-                options=["Conhecido", "Desconhecido"]
-            )
-             psadt_months = None
-             if psadt_option == "Conhecido":
-                psadt_months = st.number_input(
-                    "PSADT (meses)", 
-                    min_value=0.0, value=10.0, step=1.0
-                )
+    psa_label = psa_option
 
-        st.markdown("---")
-        st.markdown("### Perfil do Paciente")
-        
-        life_expectancy = st.radio(
-            "Expectativa de Vida",
-            options=[e for e in LifeExpectancy],
-            format_func=lambda x: x.value,
-            horizontal=True
+    has_psa_persistence = st.sidebar.checkbox(
+        "Persistência do PSA (Nunca indetectável pós-PR)",
+        help="Se o PSA nunca baixou para < 0.1 ng/mL após a cirurgia."
+    )
+    
+    psadt_option = st.sidebar.radio(
+        "Tempo de Duplicação do PSA (PSADT)",
+        options=["Conhecido", "Desconhecido / Não calculado"]
+    )
+    
+    psadt_months = None
+    if psadt_option == "Conhecido":
+        psadt_months = st.sidebar.number_input(
+            "PSADT (meses)", 
+            min_value=0.0, value=10.0, step=1.0
         )
         
-        st.markdown("**Fatores contra hormonioterapia**")
-        c1, c2 = st.columns(2)
-        with c1:
-            has_cardio = st.checkbox("Alto Risco Cardiovascular (IAM, AVC prévio)")
-            has_metabolic = st.checkbox("Sindrome Metabólica Grave / Diabetes")
-        with c2:
-            has_bone = st.checkbox("Osteoporose grave / Fratura prévia")
-            has_libido_concern = st.checkbox("Paciente não aceita perda de libido")
+    st.sidebar.markdown("---")
+    
+    gleason = st.sidebar.selectbox(
+        "Escore de Gleason (Patológico)",
+        options=[e for e in GleasonScore],
+        format_func=lambda x: x.value
+    )
+    
+    stage = st.sidebar.selectbox(
+        "Estadiamento Patológico (pT)",
+        options=[e for e in TumorStage],
+        format_func=lambda x: x.value
+    )
+
+    n_stage = st.sidebar.selectbox(
+        "Estadiamento Patológico (pN)",
+        options=[e for e in NodalStage],
+        format_func=lambda x: x.value
+    )
+    
+    margin = st.sidebar.selectbox(
+        "Margem Cirúrgica",
+        options=[e for e in MarginStatus],
+        format_func=lambda x: x.value
+    )
+    
+    st.sidebar.markdown("---")
+    
+    pet_findings = st.sidebar.selectbox(
+        "Achados PET-PSMA",
+        options=[e for e in PetFindings],
+        format_func=lambda x: x.value
+    )
+    
+    st.sidebar.markdown("---")
+    
+    life_expectancy = st.sidebar.radio(
+        "Expectativa de Vida",
+        options=[e for e in LifeExpectancy],
+        format_func=lambda x: x.value
+    )
+    
+    st.sidebar.markdown("**Fatores contra hormonioterapia**")
+    has_cardio = st.sidebar.checkbox("Alto Risco Cardiovascular (IAM, AVC prévio)")
+    has_metabolic = st.sidebar.checkbox("Sindrome Metabólica Grave / Diabetes descompensado")
+    has_bone = st.sidebar.checkbox("Osteoporose grave / Fratura prévia")
+    has_libido_concern = st.sidebar.checkbox("Paciente não aceita os efeitos da castração (libido)")
     
     return {
         "psa_pre_srt": psa_pre_srt,

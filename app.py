@@ -5,7 +5,8 @@ from src import ui, logic
 st.set_page_config(
     page_title="Calculadora ADT - Câncer de Próstata",
     page_icon="⚕️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 def main():
